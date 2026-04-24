@@ -37,22 +37,19 @@ jobs:
           mkdir -p "$HOME/bin"
           cp zig-out/bin/github-stats "$HOME/bin/github-stats"
 
-      - name: Checkout generated branch
-        uses: actions/checkout@v4
-        with:
-          ref: generated
-          path: out
-        continue-on-error: true
-
-      - name: Prepare generated workspace
+      - name: Prepare generated branch workspace
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if [ ! -d out/.git ]; then
-            mkdir -p out
-            cd out
-            git init -b generated
-            git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          mkdir -p out
+          cd out
+          git init -b generated
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git ls-remote --exit-code origin generated >/dev/null 2>&1; then
+            git fetch --depth=1 origin generated
+            git reset --hard origin/generated
           fi
 
       - name: Generate SVGs
@@ -60,7 +57,6 @@ jobs:
         env:
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
           EXCLUDE_LANGS: "HTML,CSS,Roff,Dockerfile,Shell,TeX,Makefile"
-          EXCLUDE_PRIVATE: "false"
           MAX_RETRIES: 5
         run: "$HOME/bin/github-stats"
 
@@ -70,7 +66,7 @@ jobs:
           git add .
           if ! git diff --cached --quiet; then
             git commit -m "chore: regenerate stats SVGs"
-            git push -u origin generated
+            git push -u origin HEAD:generated
           else
             echo "No changes to commit"
           fi
