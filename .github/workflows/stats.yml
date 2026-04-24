@@ -47,10 +47,6 @@ jobs:
           cd out
           git init -b generated
           git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          if git ls-remote --exit-code origin generated >/dev/null 2>&1; then
-            git fetch --depth=1 origin generated
-            git reset --hard origin/generated
-          fi
 
       - name: Generate SVGs
         working-directory: out
@@ -66,7 +62,7 @@ jobs:
           git add .
           if ! git diff --cached --quiet; then
             git commit -m "chore: regenerate stats SVGs"
-            git push -u origin HEAD:generated
+            git push --force origin HEAD:generated
           else
             echo "No changes to commit"
           fi
