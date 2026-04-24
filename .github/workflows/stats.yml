@@ -1,0 +1,68 @@
+name: Generate stats SVGs
+
+on:
+  schedule:
+    - cron: "0 */12 * * *"
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    shell: bash -euxo pipefail {0}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout jstrieb/github-stats source
+        uses: actions/checkout@v4
+        with:
+          repository: jstrieb/github-stats
+          path: stats-src
+
+      - name: Setup Zig
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29
+        with:
+          version: 0.15.2
+
+      - name: Build github-stats binary
+        working-directory: stats-src
+        run: |
+          zig build --release
+          mkdir -p "$HOME/bin"
+          cp zig-out/bin/github-stats "$HOME/bin/github-stats"
+
+      - name: Prepare generated branch workspace
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p out
+          cd out
+          git init -b generated
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+      - name: Generate SVGs
+        working-directory: out
+        env:
+          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+          EXCLUDE_LANGS: "HTML,CSS,Roff,Dockerfile,Shell,TeX,Makefile"
+          MAX_RETRIES: 5
+        run: "$HOME/bin/github-stats"
+
+      - name: Commit and push to generated branch
+        working-directory: out
+        run: |
+          git add .
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: regenerate stats SVGs"
+            git push --force origin HEAD:generated
+          else
+            echo "No changes to commit"
+          fi
