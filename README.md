@@ -52,12 +52,12 @@
 
 ## Stats
 
-<a href="https://github.com/RandomRaine/RandomRaine">
-  <img src="./generated/overview.svg#gh-dark-mode-only" alt="stats overview" />
+<a href="https://github.com/RandomRaine/RandomRaine/tree/generated">
+  <img src="https://github.com/RandomRaine/RandomRaine/blob/generated/overview.svg#gh-dark-mode-only" alt="stats overview" />
 </a>
 
-<a href="https://github.com/RandomRaine/RandomRaine">
-  <img src="./generated/languages.svg#gh-dark-mode-only" alt="languages by file size" />
+<a href="https://github.com/RandomRaine/RandomRaine/tree/generated">
+  <img src="https://github.com/RandomRaine/RandomRaine/blob/generated/languages.svg#gh-dark-mode-only" alt="languages by file size" />
 </a>
 
 <img src="https://github-readme-streak-stats.herokuapp.com?user=RandomRaine&hide_border=true&background=0d1f15&stroke=6b8e6f&ring=e8a87c&fire=e8a87c&currStreakLabel=e8a87c&sideNums=c8d5bb&sideLabels=c8d5bb&dates=6b8e6f&currStreakNum=c8d5bb" alt="streak" />

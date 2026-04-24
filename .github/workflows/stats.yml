@@ -11,49 +11,66 @@ on:
 permissions:
   contents: write
 
+defaults:
+  run:
+    shell: bash -euxo pipefail {0}
+
 jobs:
-  generate:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/checkout@v4
+      - name: Checkout jstrieb/github-stats source
+        uses: actions/checkout@v4
         with:
           repository: jstrieb/github-stats
-          path: github-stats
+          path: stats-src
 
-      - uses: actions/setup-python@v5
+      - name: Setup Zig
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29
         with:
-          python-version: "3.x"
-          cache: pip
-          cache-dependency-path: github-stats/requirements.txt
+          version: 0.15.2
 
-      - name: Install requirements
+      - name: Build github-stats binary
+        working-directory: stats-src
         run: |
-          python3 -m pip install --upgrade pip setuptools wheel
-          python3 -m pip install -r github-stats/requirements.txt
+          zig build --release
+          mkdir -p "$HOME/bin"
+          cp zig-out/bin/github-stats "$HOME/bin/github-stats"
 
-      - name: Generate stats images
-        env:
-          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-          GITHUB_ACTOR: RandomRaine
-          EXCLUDED_LANGS: "HTML,CSS,Roff,Dockerfile,Shell,TeX,Makefile"
-          EXCLUDE_FORKED_REPOS: "true"
-        run: |
-          cd github-stats
-          python3 --version
-          python3 generate_images.py
+      - name: Checkout generated branch
+        uses: actions/checkout@v4
+        with:
+          ref: generated
+          path: out
+        continue-on-error: true
 
-      - name: Commit and push
+      - name: Prepare generated workspace
         run: |
-          mkdir -p generated
-          cp -v github-stats/generated/* generated/
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add generated/
-          if ! git diff --staged --quiet; then
+          if [ ! -d out/.git ]; then
+            mkdir -p out
+            cd out
+            git init -b generated
+            git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          fi
+
+      - name: Generate SVGs
+        working-directory: out
+        env:
+          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+          EXCLUDE_LANGS: "HTML,CSS,Roff,Dockerfile,Shell,TeX,Makefile"
+          EXCLUDE_PRIVATE: "false"
+          MAX_RETRIES: 5
+        run: "$HOME/bin/github-stats"
+
+      - name: Commit and push to generated branch
+        working-directory: out
+        run: |
+          git add .
+          if ! git diff --cached --quiet; then
             git commit -m "chore: regenerate stats SVGs"
-            git push
+            git push -u origin generated
           else
-            echo "No stats changes to commit."
+            echo "No changes to commit"
           fi
